@@ -1,2 +1,3 @@
+include ':transsdklib'
 include ':app'
 rootProject.name = "My Application"
