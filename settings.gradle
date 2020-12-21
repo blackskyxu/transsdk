@@ -1,2 +1,7 @@
 include ':app'
+include 'dkplayer-java'
+include 'dkplayer-players:ijk'
+include 'dkplayer-players:exo'
+include 'dkplayer-videocache'
+include 'dkplayer-ui'
 rootProject.name = "My Application"
