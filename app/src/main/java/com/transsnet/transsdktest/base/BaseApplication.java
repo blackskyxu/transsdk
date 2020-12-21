@@ -2,9 +2,11 @@ package com.transsnet.transsdktest.base;
 
 import android.app.Application;
 
+import androidx.multidex.MultiDexApplication;
+
 import com.transsnet.transsdk.manager.TransConfigManager;
 
-public class BaseApplication extends Application {
+public class BaseApplication extends MultiDexApplication {
 
     @Override
     public void onCreate() {
