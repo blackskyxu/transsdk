@@ -163,6 +163,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onLoadDataFailed(int code, String msg) {
             Logger.d(TAG, "load failed");
+            if (code == 120002) {
+                Logger.e(TAG, "channel key is error !!!!");
+            }
         }
     };
     @Override

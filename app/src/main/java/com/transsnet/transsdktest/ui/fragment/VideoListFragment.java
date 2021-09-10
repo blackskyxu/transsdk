@@ -203,6 +203,10 @@ public class VideoListFragment extends Fragment {
         public void onLoadDataFailed(int code, String msg) {
             Logger.d(TAG, "load failed");
             Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
+            mProgressBar.setVisibility(View.GONE);
+            if (code == 120002) {
+                Logger.e(TAG, "channel key is error !!!!");
+            }
         }
     };
 

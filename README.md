@@ -5,18 +5,28 @@
 1 确认 android studio 的 Project 根目录的主 gradle 中配置了 jcenter 支持
 
 ```java
+buildscript {
+    repositories {
+        maven {
+            url "http://52.83.16.53:11003/repository/maven-release-public" // vskit 项目仓库
+        }
+        jcenter()
+    }
+}
+
 allprojects {
     repositories {
-        jcenter() // 或者 mavenCentral()
+        maven {
+            url "http://52.83.16.53:11003/repository/maven-release-public"
+        }
+        jcenter() 
     }
 }
 ```
 
 2 然后在module的build.gradle文件添加依赖项
 
-```java
-implementation 'com.transsnet.transsdk:transsdk:1.0.7'
-```
+ implementation 'com.transsnet.lib:TransSdk:0.0.3'
 
 3 权限
 

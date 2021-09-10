@@ -1,7 +1,5 @@
 package com.transsnet.transsdktest.base;
 
-import android.app.Application;
-
 import androidx.multidex.MultiDexApplication;
 
 import com.transsnet.transsdk.manager.TransConfigManager;
@@ -11,10 +9,8 @@ public class BaseApplication extends MultiDexApplication {
     @Override
     public void onCreate() {
         super.onCreate();
-//        TransConfigImpl.getInstance().init(this, "1234567");
-//        TransConfigImpl.getInstance().setLoginEnabled(true);
-
-        TransConfigManager.getTransConfig().init(this, "xshare");
+        // 此处必须配置channelKey否则无法使用
+        TransConfigManager.getTransConfig().init(this, "填入你的ChannelKey");
         TransConfigManager.getTransConfig().setLoginEnabled(true);
     }
 }
