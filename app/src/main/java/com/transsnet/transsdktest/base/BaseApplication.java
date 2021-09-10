@@ -10,7 +10,7 @@ public class BaseApplication extends MultiDexApplication {
     public void onCreate() {
         super.onCreate();
         // 此处必须配置channelKey否则无法使用
-        TransConfigManager.getTransConfig().init(this, "填入你的ChannelKey");
+        TransConfigManager.getTransConfig().init(this, "input your ChannelKey");
         TransConfigManager.getTransConfig().setLoginEnabled(true);
     }
 }
