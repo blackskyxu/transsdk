@@ -35,6 +35,7 @@ import androidx.core.view.MotionEventCompat;
 import androidx.core.view.VelocityTrackerCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.ViewConfigurationCompat;
+import androidx.core.view.accessibility.AccessibilityEventCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.core.view.accessibility.AccessibilityRecordCompat;
 import androidx.core.widget.EdgeEffectCompat;
@@ -65,8 +66,6 @@ public class VerticalViewPager extends ViewGroup {
 
     private static final int MIN_FLING_VELOCITY = 400; // dips
 
-    private final int TYPE_VIEW_SCROLLED = 4096;
-
     private static final int[] LAYOUT_ATTRS = new int[]{
             android.R.attr.layout_gravity
     };
@@ -76,6 +75,7 @@ public class VerticalViewPager extends ViewGroup {
      * If the app changes this when we don't expect it, we'll throw a big obnoxious exception.
      */
     private int mExpectedAdapterCount;
+    private boolean scrollEnable;
 
     static class ItemInfo {
         Object object;
@@ -1344,7 +1344,7 @@ public class VerticalViewPager extends ViewGroup {
                         + ": " + mChildWidthMeasureSpec);
 
                 final LayoutParams lp = (LayoutParams) child.getLayoutParams();
-                if (lp != null || !lp.isDecor) {
+                if (lp == null || !lp.isDecor) {
                     final int heightSpec = MeasureSpec.makeMeasureSpec(
                             (int) (childHeightSize * lp.heightFactor), MeasureSpec.EXACTLY);
                     child.measure(mChildWidthMeasureSpec, heightSpec);
@@ -1636,13 +1636,19 @@ public class VerticalViewPager extends ViewGroup {
         if (needPopulate) {
             // Done with scroll, no longer want to cache view drawing.
             setScrollingCacheEnabled(false);
-            mScroller.abortAnimation();
-            int oldX = getScrollX();
-            int oldY = getScrollY();
-            int x = mScroller.getCurrX();
-            int y = mScroller.getCurrY();
-            if (oldX != x || oldY != y) {
-                scrollTo(x, y);
+            boolean wasScrolling = !mScroller.isFinished();
+            if (wasScrolling) {
+                mScroller.abortAnimation();
+                int oldX = getScrollX();
+                int oldY = getScrollY();
+                int x = mScroller.getCurrX();
+                int y = mScroller.getCurrY();
+                if (oldX != x || oldY != y) {
+                    scrollTo(x, y);
+                    if (y != oldY) {
+                        pageScrolled(y);
+                    }
+                }
             }
         }
         mPopulatePending = false;
@@ -1677,6 +1683,15 @@ public class VerticalViewPager extends ViewGroup {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
+        if (scrollEnable){
+            return super.onInterceptTouchEvent(ev);
+        }
+        if (mFakeDragging) {
+            // A fake drag is in progress already, ignore this real one
+            // but still eat the touch events.
+            // (It is likely that the user is multi-touching the screen.)
+            return super.onInterceptTouchEvent(ev);
+        }
         /*
          * This method JUST determines whether we want to intercept the motion.
          * If we return true, onMotionEvent will be called and we do the actual
@@ -1720,9 +1735,9 @@ public class VerticalViewPager extends ViewGroup {
                  */
 
                 /*
-                 * Locally do absolute value. mLastMotionY is set to the y value
-                 * of the down event.
-                 */
+                * Locally do absolute value. mLastMotionY is set to the y value
+                * of the down event.
+                */
                 final int activePointerId = mActivePointerId;
                 if (activePointerId == INVALID_POINTER) {
                     // If we don't have a valid id, the touch down wasn't on content.
@@ -1730,10 +1745,10 @@ public class VerticalViewPager extends ViewGroup {
                 }
 
                 final int pointerIndex = MotionEventCompat.findPointerIndex(ev, activePointerId);
-                final float y = MotionEventCompat.getY(ev, pointerIndex);
+                final float y = cusGetY(ev, pointerIndex);
                 final float dy = y - mLastMotionY;
                 final float yDiff = Math.abs(dy);
-                final float x = MotionEventCompat.getX(ev, pointerIndex);
+                final float x = cusGetX(ev, pointerIndex);
                 final float xDiff = Math.abs(x - mInitialMotionX);
                 if (DEBUG) Log.v(TAG, "Moved x to " + x + "," + y + " diff=" + xDiff + "," + yDiff);
 
@@ -1820,7 +1835,36 @@ public class VerticalViewPager extends ViewGroup {
     }
 
     @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        return super.dispatchTouchEvent(ev);
+    }
+
+    private float x1;
+    private float y1;
+
+    public boolean onRefreshTouchEvent(MotionEvent ev){
+        switch (ev.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                x1 = ev.getX();
+                y1 = ev.getY();
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                float x2 = ev.getX();
+                float y2 = ev.getY();
+                float dy = y2 - y1;
+                float dx = x2 - x1;
+                if (getCurrentItem() == getAdapter().getCount() - 1 && dy < 0) {
+                    return false;
+                }
+        }
+        return true;
+    }
+
+    @Override
     public boolean onTouchEvent(MotionEvent ev) {
+        if (scrollEnable){
+            return super.onTouchEvent(ev);
+        }
         if (mFakeDragging) {
             // A fake drag is in progress already, ignore this real one
             // but still eat the touch events.
@@ -1862,9 +1906,18 @@ public class VerticalViewPager extends ViewGroup {
             case MotionEvent.ACTION_MOVE:
                 if (!mIsBeingDragged) {
                     final int pointerIndex = MotionEventCompat.findPointerIndex(ev, mActivePointerId);
-                    final float y = MotionEventCompat.getY(ev, pointerIndex);
+                    if (pointerIndex == -1) {
+                        // A child has consumed some touch events and put us into an inconsistent
+                        // state.
+                        mActivePointerId = INVALID_POINTER;
+                        endDrag();
+                        needsInvalidate = mTopEdge.onRelease() | mBottomEdge.onRelease();
+                        break;
+                    }
+
+                    final float y = cusGetY(ev, pointerIndex);
                     final float yDiff = Math.abs(y - mLastMotionY);
-                    final float x = MotionEventCompat.getX(ev, pointerIndex);
+                    final float x = cusGetX(ev, pointerIndex);
                     final float xDiff = Math.abs(x - mLastMotionX);
                     if (DEBUG)
                         Log.v(TAG, "Moved x to " + x + "," + y + " diff=" + xDiff + "," + yDiff);
@@ -1890,7 +1943,7 @@ public class VerticalViewPager extends ViewGroup {
                     // Scroll to follow the motion event
                     final int activePointerIndex = MotionEventCompat.findPointerIndex(
                             ev, mActivePointerId);
-                    final float y = MotionEventCompat.getY(ev, activePointerIndex);
+                    final float y = cusGetY(ev, activePointerIndex);
                     needsInvalidate |= performDrag(y);
                 }
                 break;
@@ -1908,7 +1961,7 @@ public class VerticalViewPager extends ViewGroup {
                     final float pageOffset = (((float) scrollY / height) - ii.offset) / ii.heightFactor;
                     final int activePointerIndex =
                             MotionEventCompat.findPointerIndex(ev, mActivePointerId);
-                    final float y = MotionEventCompat.getY(ev, activePointerIndex);
+                    final float y = cusGetY(ev, activePointerIndex);
                     final int totalDelta = (int) (y - mInitialMotionY);
                     int nextPage = determineTargetPage(currentPage, pageOffset, initialVelocity,
                             totalDelta);
@@ -1929,21 +1982,37 @@ public class VerticalViewPager extends ViewGroup {
                 break;
             case MotionEventCompat.ACTION_POINTER_DOWN: {
                 final int index = MotionEventCompat.getActionIndex(ev);
-                final float y = MotionEventCompat.getY(ev, index);
+                final float y = cusGetY(ev, index);
                 mLastMotionY = y;
                 mActivePointerId = MotionEventCompat.getPointerId(ev, index);
                 break;
             }
             case MotionEventCompat.ACTION_POINTER_UP:
                 onSecondaryPointerUp(ev);
-                mLastMotionY = MotionEventCompat.getY(ev,
-                        MotionEventCompat.findPointerIndex(ev, mActivePointerId));
+                mLastMotionY = cusGetY(ev, MotionEventCompat.findPointerIndex(ev, mActivePointerId));
                 break;
         }
         if (needsInvalidate) {
             ViewCompat.postInvalidateOnAnimation(this);
         }
         return true;
+    }
+
+
+    private float cusGetX(MotionEvent ev, int pointerIndex) {
+        try {
+            return MotionEventCompat.getX(ev, pointerIndex);
+        } catch (Exception ignored) {
+            return ev.getX();
+        }
+    }
+
+    private float cusGetY(MotionEvent ev, int activePointerIndex) {
+        try {
+            return MotionEventCompat.getY(ev, activePointerIndex);
+        } catch (Exception ignored) {
+            return ev.getY();
+        }
     }
 
     private void requestParentDisallowInterceptTouchEvent(boolean disallowIntercept) {
@@ -2277,6 +2346,14 @@ public class VerticalViewPager extends ViewGroup {
         return mFakeDragging;
     }
 
+    /**
+     * 是否可以滚动的开关
+     * @param enabled true 可以滚动， false 不可以滚动
+     */
+    public void setScrollEnabled(boolean enabled){
+        this.scrollEnable = enabled;
+    }
+
     private void onSecondaryPointerUp(MotionEvent ev) {
         final int pointerIndex = MotionEventCompat.getActionIndex(ev);
         final int pointerId = MotionEventCompat.getPointerId(ev, pointerIndex);
@@ -2284,7 +2361,7 @@ public class VerticalViewPager extends ViewGroup {
             // This was our active pointer going up. Choose a new
             // active pointer and adjust accordingly.
             final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
-            mLastMotionY = MotionEventCompat.getY(ev, newPointerIndex);
+            mLastMotionY = cusGetY(ev, newPointerIndex);
             mActivePointerId = MotionEventCompat.getPointerId(ev, newPointerIndex);
             if (mVelocityTracker != null) {
                 mVelocityTracker.clear();
@@ -2393,10 +2470,12 @@ public class VerticalViewPager extends ViewGroup {
                     break;
                 case KeyEvent.KEYCODE_TAB:
                     if (Build.VERSION.SDK_INT >= 11) {
+                        // The focus finder had a bug handling FOCUS_FORWARD and FOCUS_BACKWARD
+                        // before Android 3.0. Ignore the tab key on those devices.
                         if (event.hasNoModifiers()) {
-                            handled = this.arrowScroll(2);
-                        } else if (event.hasModifiers(1)) {
-                            handled = this.arrowScroll(1);
+                            handled = arrowScroll(FOCUS_FORWARD);
+                        } else if (event.hasModifiers(KeyEvent.META_SHIFT_ON)) {
+                            handled = arrowScroll(FOCUS_BACKWARD);
                         }
                     }
                     break;
@@ -2612,7 +2691,7 @@ public class VerticalViewPager extends ViewGroup {
     @Override
     public boolean dispatchPopulateAccessibilityEvent(AccessibilityEvent event) {
         // Dispatch scroll events from this ViewPager.
-        if (event.getEventType() == TYPE_VIEW_SCROLLED) {
+        if (event.getEventType() == AccessibilityEventCompat.TYPE_VIEW_SCROLLED) {
             return super.dispatchPopulateAccessibilityEvent(event);
         }
 
@@ -2660,7 +2739,7 @@ public class VerticalViewPager extends ViewGroup {
             event.setClassName(ViewPager.class.getName());
             final AccessibilityRecordCompat recordCompat = AccessibilityRecordCompat.obtain();
             recordCompat.setScrollable(canScroll());
-            if (event.getEventType() == TYPE_VIEW_SCROLLED
+            if (event.getEventType() == AccessibilityEventCompat.TYPE_VIEW_SCROLLED
                     && mAdapter != null) {
                 recordCompat.setItemCount(mAdapter.getCount());
                 recordCompat.setFromIndex(mCurItem);

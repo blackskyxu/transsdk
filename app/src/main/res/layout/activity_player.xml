@@ -6,10 +6,17 @@
     android:layout_height="match_parent"
     tools:context=".player.PlayerActivity">
 
-    <com.transsnet.transsdktest.view.VerticalViewPager
-        android:id="@+id/vvp"
+    <com.transsnet.transsdktest.view.SwipeRefreshLoadLayout
+        android:id="@+id/refresh_layout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
+
+        <com.transsnet.transsdktest.view.VerticalViewPager
+            android:id="@+id/vvp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </com.transsnet.transsdktest.view.SwipeRefreshLoadLayout>
 
     <Button
         android:id="@+id/like"
@@ -27,4 +34,5 @@
         android:text="上报评论数据"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/like"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

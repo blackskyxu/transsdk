@@ -10,13 +10,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.AppCompatTextView;
 import androidx.viewpager.widget.PagerAdapter;
 
 import com.bumptech.glide.Glide;
 import com.transsnet.transsdk.dto.VideoInfo;
 import com.transsnet.transsdktest.R;
 import com.transsnet.transsdktest.player.cache.PreloadManager;
+import com.transsnet.transsdktest.view.CircleImageView;
 import com.transsnet.transsdktest.view.TikTokView;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +39,11 @@ public class PlayAdapter extends PagerAdapter {
 
     public PlayAdapter(List<VideoInfo> videoBeans) {
         this.mVideoBeans = videoBeans;
+    }
+
+    @Override
+    public int getItemPosition(@NonNull @NotNull Object object) {
+        return POSITION_NONE;
     }
 
     @Override
@@ -79,6 +88,8 @@ public class PlayAdapter extends PagerAdapter {
                 Toast.makeText(context, "点击了标题", Toast.LENGTH_SHORT).show();
             }
         });
+        viewHolder.mAuthorName.setText(item.getAuthorName());
+        Glide.with(context).load(item.getAvatarUrl()).into(viewHolder.header);
         viewHolder.mPosition = position;
         container.addView(view);
         return view;
@@ -88,11 +99,13 @@ public class PlayAdapter extends PagerAdapter {
     public void destroyItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
         View itemView = (View) object;
         container.removeView(itemView);
-        VideoInfo item = mVideoBeans.get(position);
-        //取消预加载
-        PreloadManager.getInstance(container.getContext()).removePreloadTask(item.getVideoUrl());
-        //保存起来用来复用
-        mViewPool.add(itemView);
+        if (mVideoBeans.size() > position) {
+            VideoInfo item = mVideoBeans.get(position);
+            //取消预加载
+            PreloadManager.getInstance(container.getContext()).removePreloadTask(item.getVideoUrl());
+            //保存起来用来复用
+            mViewPool.add(itemView);
+        }
     }
 
     /**
@@ -105,11 +118,15 @@ public class PlayAdapter extends PagerAdapter {
         public ImageView mThumb;//封面图
         public TikTokView mTikTokView;
         public FrameLayout mPlayerContainer;
+        private AppCompatTextView mAuthorName;
+        private CircleImageView header;
 
         ViewHolder(View itemView) {
             mTikTokView = itemView.findViewById(R.id.tiktok_View);
             mTitle = mTikTokView.findViewById(R.id.tv_title);
             mThumb = mTikTokView.findViewById(R.id.iv_thumb);
+            mAuthorName = mTikTokView.findViewById(R.id.author_name);
+            header = mTikTokView.findViewById(R.id.header);
             mPlayerContainer = itemView.findViewById(R.id.container);
             itemView.setTag(this);
         }

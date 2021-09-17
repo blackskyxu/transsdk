@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -22,16 +23,43 @@
         tools:visibility="visible"/>
 
 
-    <TextView
-        android:id="@+id/tv_title"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:padding="20dp"
-        android:textSize="16sp"
-        android:lineSpacingExtra="4dp"
-        android:textColor="@android:color/white"
-        android:elevation="5dp"
-        android:text="标题标题标题标题标题标题标题标题标题标题标题标题标题标题标题"/>
+        android:layout_gravity="bottom">
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="20dp"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            android:textColor="@android:color/white"
+            android:elevation="5dp"
+            android:text="标题标题标题标题标题标题标题标题标题标题标题标题标题标题标题"
+            app:layout_constraintBottom_toTopOf="@id/header" />
+
+        <com.transsnet.transsdktest.view.CircleImageView
+            android:id="@+id/header"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginBottom="40dp"
+            android:layout_marginStart="16dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/author_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            tools:text="作者"
+            android:textColor="#999999"
+            android:textSize="14sp"
+            app:layout_constraintTop_toTopOf="@+id/header"
+            app:layout_constraintBottom_toBottomOf="@+id/header"
+            app:layout_constraintStart_toEndOf="@+id/header"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </FrameLayout>

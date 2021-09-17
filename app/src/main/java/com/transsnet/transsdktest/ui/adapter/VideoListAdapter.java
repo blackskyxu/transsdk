@@ -6,11 +6,13 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatImageView;
+import androidx.appcompat.widget.AppCompatTextView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.transsnet.transsdk.dto.VideoInfo;
 import com.transsnet.transsdktest.R;
+import com.transsnet.transsdktest.view.CircleImageView;
 
 import java.util.List;
 
@@ -51,12 +53,16 @@ public class VideoListAdapter extends RecyclerView.Adapter<VideoListAdapter.View
     public static class ViewHolder extends RecyclerView.ViewHolder {
 
         private final AppCompatImageView imageView;
+        private final AppCompatTextView authorName;
+        private final CircleImageView header;
         private final OnItemClickListener onItemClickListener;
 
         public ViewHolder(@NonNull View itemView, OnItemClickListener onItemClickListener) {
             super(itemView);
             this.onItemClickListener = onItemClickListener;
             imageView = itemView.findViewById(R.id.image_view);
+            authorName = itemView.findViewById(R.id.author_name);
+            header = itemView.findViewById(R.id.header);
             itemView.setOnClickListener(v -> {
                 if (this.onItemClickListener != null) {
                     this.onItemClickListener.onItemClickListener(getAdapterPosition());
@@ -66,6 +72,8 @@ public class VideoListAdapter extends RecyclerView.Adapter<VideoListAdapter.View
 
         private void setData(VideoInfo videoInfo) {
             Glide.with(itemView.getContext()).load(videoInfo.getVideoImage()).into(imageView);
+            authorName.setText(videoInfo.getAuthorName());
+            Glide.with(itemView.getContext()).load(videoInfo.getAvatarUrl()).into(header);
         }
     }
 

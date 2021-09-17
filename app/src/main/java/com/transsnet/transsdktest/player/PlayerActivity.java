@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -16,6 +17,7 @@ import com.transsnet.transsdk.constants.CommentStatusEnum;
 import com.transsnet.transsdk.constants.LikeStatusEnum;
 import com.transsnet.transsdk.constants.PageIDEnum;
 import com.transsnet.transsdk.dto.VideoInfo;
+import com.transsnet.transsdk.listener.VideoListener;
 import com.transsnet.transsdktest.R;
 import com.transsnet.transsdktest.controller.TikTokController;
 import com.transsnet.transsdktest.player.cache.PreloadManager;
@@ -25,13 +27,14 @@ import com.transsnet.transsdktest.ui.adapter.PlayAdapter;
 import com.transsnet.transsdktest.utils.Logger;
 import com.transsnet.transsdktest.utils.MD5;
 import com.transsnet.transsdktest.utils.Utils;
+import com.transsnet.transsdktest.view.SwipeRefreshLoadLayout;
 import com.transsnet.transsdktest.view.VerticalViewPager;
 import com.transsnet.transsdktest.viewmodel.TestViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class PlayerActivity extends AppCompatActivity {
+public class PlayerActivity extends AppCompatActivity implements SwipeRefreshLoadLayout.OnRefreshLoadListener, VideoListener {
 
     private static final String TAG = "PlayerActivity";
 
@@ -44,14 +47,16 @@ public class PlayerActivity extends AppCompatActivity {
     private PreloadManager mPreloadManager;
     private PlayAdapter mPlayAdapter;
     private List<VideoInfo> mVideoList = new ArrayList<>();
-    private VideoView mVideoView;
+    private VideoView  mVideoView;
     private TikTokController mController;
     private TestViewModel viewModel;
     private long startPlayTime;
     private String expStamp;        // 曝光时间戳唯一的
+    private SwipeRefreshLoadLayout refreshLayout;
 
     private boolean isLike;
     private boolean isComment;
+    private boolean isRefresh;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,11 +66,13 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void initView() {
+        initRefreshLayout();
         viewModel = new ViewModelProvider(this).get(TestViewModel.class);
 
         initViewPager();
         initVideoView();
         initClickEvent();
+        initListener();
 
         mPreloadManager = PreloadManager.getInstance(this);
 
@@ -87,6 +94,11 @@ public class PlayerActivity extends AppCompatActivity {
         });
 
         viewModel.postPvEvent(PageIDEnum.VIDEO_PLAY);
+    }
+
+    private void initRefreshLayout() {
+        refreshLayout = findViewById(R.id.refresh_layout);
+        refreshLayout.setOnRefreshLoadListener(this);
     }
 
     private void initViewPager() {
@@ -116,8 +128,10 @@ public class PlayerActivity extends AppCompatActivity {
             @Override
             public void onPageSelected(int position) {
                 super.onPageSelected(position);
+                refreshLayout.setEnabled(position == 0);
                 if (position == mCurPos) return;
                 startPlay(position);
+                requestNextPage();
             }
 
             @Override
@@ -205,6 +219,10 @@ public class PlayerActivity extends AppCompatActivity {
         });
     }
 
+    private void initListener() {
+        viewModel.addVideoListener(this);
+    }
+
     private void startPlay(int position) {
         int count = mViewPager.getChildCount();
         for (int i = 0; i < count; i ++) {
@@ -252,5 +270,53 @@ public class PlayerActivity extends AppCompatActivity {
         mPreloadManager.removeAllPreloadTask();
         //清除缓存，实际使用可以不需要清除，这里为了方便测试
         ProxyVideoCacheManager.clearAllCache(this);
+        viewModel.removeVideoListener(this);
+    }
+
+    @Override
+    public void onload() {
+        Logger.d(TAG, "onLoad");
+        viewModel.loadVideoList();
+    }
+
+    private void requestNextPage() {
+        if (mVideoList.size() - mCurPos <= 3) {
+            viewModel.loadVideoList();
+        }
+    }
+
+    @Override
+    public void onRefresh() {
+        viewModel.refresh();
+        isRefresh = true;
+    }
+
+    @Override
+    public void onLoadDataSuccess(List<VideoInfo> recommendVideoList) {
+        if (isRefresh) {
+            isRefresh = false;
+            refreshLayout.setRefreshing(false);
+            mVideoList.clear();
+            mPlayAdapter.notifyDataSetChanged();
+            mVideoList.addAll(recommendVideoList);
+            mPlayAdapter.notifyDataSetChanged();
+            mCurPos = 0;
+            startPlay(mCurPos);
+        } else {
+            refreshLayout.completeLoadMore();
+            mVideoList.addAll(recommendVideoList);
+            mPlayAdapter.notifyDataSetChanged();
+        }
+    }
+
+    @Override
+    public void onLoadDataFailed(int code, String msg) {
+        if (isRefresh) {
+            isRefresh = false;
+            refreshLayout.setRefreshing(false);
+        } else {
+            refreshLayout.completeLoadMore();
+        }
+        Toast.makeText(getApplicationContext(), "加载失败", Toast.LENGTH_SHORT).show();
     }
 }

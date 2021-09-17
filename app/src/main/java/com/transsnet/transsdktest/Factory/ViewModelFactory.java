@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.transsnet.transsdktest.viewmodel.TestViewModel;
 
-
 public class ViewModelFactory implements ViewModelProvider.Factory {
 
     private final Application mApplication;

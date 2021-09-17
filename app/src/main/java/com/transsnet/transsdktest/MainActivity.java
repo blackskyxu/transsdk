@@ -151,9 +151,13 @@ public class MainActivity extends AppCompatActivity {
         viewModel.postPvEvent(PageIDEnum.OTHER_PAGE);
 
         viewModel.addVideoListener(mVideoListener);
+
+        if (viewModel.isAddVideoListener(mVideoListener)) {
+            Logger.d(TAG, "has added video Listener");
+        }
     }
 
-    private VideoListener mVideoListener = new VideoListener() {
+    private final VideoListener mVideoListener = new VideoListener() {
         @Override
         public void onLoadDataSuccess(List<VideoInfo> recommendVideoList) {
             Logger.d(TAG, "load success");
@@ -163,9 +167,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onLoadDataFailed(int code, String msg) {
             Logger.d(TAG, "load failed");
-            if (code == 120002) {
-                Logger.e(TAG, "channel key is error !!!!");
-            }
         }
     };
     @Override

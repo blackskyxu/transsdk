@@ -35,6 +35,9 @@ public class TestViewModel extends ViewModel {
         VideoManager.getVideoService().addVideoListener(videoListener);
     }
 
+    public boolean isAddVideoListener(VideoListener videoListener) {
+        return VideoManager.getVideoService().isAddVideoListener(videoListener);
+    }
 
     public void removeVideoListener(VideoListener videoListener) {
         VideoManager.getVideoService().removeVideoListener(videoListener);
