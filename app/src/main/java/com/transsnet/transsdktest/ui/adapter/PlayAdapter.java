@@ -42,7 +42,10 @@ public class PlayAdapter extends PagerAdapter {
     }
 
     @Override
-    public int getItemPosition(@NonNull @NotNull Object object) {
+    public int getItemPosition(@NonNull Object object) {
+        if (object instanceof FrameLayout && ((FrameLayout) object).isShown()) {
+            return super.getItemPosition(object);
+        }
         return POSITION_NONE;
     }
 
