@@ -150,6 +150,7 @@ public class PlayerActivity extends AppCompatActivity implements SwipeRefreshLoa
         });
     }
 
+    private VideoInfo lastVideoInfo;
     private void initVideoView() {
         mVideoView = new VideoView(this);
         mVideoView.setLooping(true);
@@ -169,20 +170,21 @@ public class PlayerActivity extends AppCompatActivity implements SwipeRefreshLoa
             @Override
             public void onPlayStateChanged(int playState) {
                 Logger.d(TAG, "playState: " + playState);
-                VideoInfo videoInfo = mVideoList.get(mCurPos);
                 if (playState == VideoView.STATE_PREPARING) {
+                    VideoInfo videoInfo = mVideoList.get(mCurPos);
                     startPlayTime = System.currentTimeMillis();
                     if (TextUtils.isEmpty(expStamp)) {
                         expStamp = MD5.getMD5(videoInfo.getVideoId() + startPlayTime);
                     }
                     viewModel.postStartPlayEvent(videoInfo.getVideoId(), expStamp);
                 } else if (playState == VideoView.STATE_IDLE) {
+                    if (lastVideoInfo == null) return;
                     long curTime = System.currentTimeMillis();
                     if (TextUtils.isEmpty(expStamp)) {
-                        expStamp = MD5.getMD5(videoInfo.getVideoId() + curTime);
+                        expStamp = MD5.getMD5(lastVideoInfo.getVideoId() + curTime);
                     }
                     long duration = curTime - startPlayTime;
-                    viewModel.postPlayEvent(videoInfo.getVideoId(), expStamp, duration);
+                    viewModel.postPlayEvent(lastVideoInfo.getVideoId(), expStamp, duration);
                 }
 
             }
@@ -239,6 +241,7 @@ public class PlayerActivity extends AppCompatActivity implements SwipeRefreshLoa
                 mController.addControlComponent(viewHolder.mTikTokView, true);
                 viewHolder.mPlayerContainer.addView(mVideoView, 0);
                 mVideoView.start();
+                lastVideoInfo = mVideoList.get(mCurPos);
                 mCurPos = position;
                 break;
             }
