@@ -26,7 +26,7 @@ allprojects {
 
 2 然后在module的build.gradle文件添加依赖项
 
- implementation 'com.transsnet.lib:TransSdk:0.0.5'
+ implementation 'com.transsnet.lib:TransSdk:0.2.0'
 
 3 权限
 
